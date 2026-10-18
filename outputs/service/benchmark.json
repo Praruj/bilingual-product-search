@@ -1,0 +1,141 @@
+{
+  "cpu": "Intel64 Family 6 Model 142 Stepping 9, GenuineIntel",
+  "torch_threads": "default (all cores)",
+  "startup_s": 16.485445976257324,
+  "n_queries_per_locale": 200,
+  "latency_ms": {
+    "jp_bm25": {
+      "server_p50": 0.59,
+      "server_p95": 0.9314999999999996,
+      "http_p50": 3.5640499991131946,
+      "http_p95": 4.546315002153278
+    },
+    "jp_dense": {
+      "server_p50": 28.715,
+      "server_p95": 39.8535,
+      "http_p50": 31.96150000076159,
+      "http_p95": 43.28861499870981
+    },
+    "jp_hybrid": {
+      "server_p50": 28.705,
+      "server_p95": 36.4085,
+      "http_p50": 32.01290000106383,
+      "http_p95": 39.79594999873369
+    },
+    "jp_rerank": {
+      "server_p50": 1167.855,
+      "server_p95": 1238.3415,
+      "http_p50": 1171.2965500009886,
+      "http_p95": 1242.4868399994011
+    },
+    "us_bm25": {
+      "server_p50": 0.55,
+      "server_p95": 0.8,
+      "http_p50": 3.3535999991727294,
+      "http_p95": 4.911069999434401
+    },
+    "us_dense": {
+      "server_p50": 27.87,
+      "server_p95": 34.23349999999999,
+      "http_p50": 30.992099998911726,
+      "http_p95": 37.420785000176686
+    },
+    "us_hybrid": {
+      "server_p50": 28.990000000000002,
+      "server_p95": 35.738499999999995,
+      "http_p50": 32.07365000162099,
+      "http_p95": 39.12798000164912
+    },
+    "us_rerank": {
+      "server_p50": 1167.26,
+      "server_p95": 1240.309,
+      "http_p50": 1170.9765000014158,
+      "http_p95": 1243.6420650010405
+    },
+    "recommend": {
+      "http_p50": 3.3428000006097136,
+      "http_p95": 4.475869999805581
+    }
+  },
+  "examples": {
+    "ja": {
+      "query": "ワイヤレスイヤホン ノイズキャンセリング",
+      "locale": "jp",
+      "mode": "rerank",
+      "took_ms": 1126.36,
+      "results": [
+        {
+          "product_id": "B07MGZSJ9N",
+          "text": "ソニー ワイヤレスノイズキャンセリングイヤホン WI-C600N : Bluetooth対応 / Amazon Alexa搭載 / モデル / apt-x対応 2019年モデル / マイク付き /ブラック WI-C600N BM | ソニー(SONY) | ブラック | 長時間再生と高音質を両立したネックバンド式ワイヤレスノイズキャンセリングイヤホン 圧縮音源の高音域をクリアに再現する「DSEE」"
+        },
+        {
+          "product_id": "B00FF080J8",
+          "text": "ソニー ワイヤレスノイズキャンセリングイヤホン MDR-NWBT20N : Bluetooth対応 ブラック MDR-NWBT20N B | ソニー(SONY) | ブラック | NFC搭載でワンタッチ接続 騒音を抑えてクリアに音楽を楽しめる、デジタルノイズキャンセリング機能搭載 周囲の騒音を分析し、最適なノイズキャンセリングモードを自動選択するAIノイズキャンセリング機能搭載"
+        },
+        {
+          "product_id": "B0756H1WL3",
+          "text": "ソニー ワイヤレスノイズキャンセリングイヤホン WI-1000X : Bluetooth/ Amazon Alexa搭載 /ハイレゾ対応 最大10時間連続再生 カナル型 マイク付き 2017年モデル 360 Reality Audio認定モデル ブラック WI-1000X B | ソニー(SONY) | ブラック | ワイヤレスでもハイレゾ相当の高音質(LDAC/DSEE HX) 飛行機など大気の"
+        }
+      ]
+    },
+    "en": {
+      "query": "stainless steel water bottle",
+      "locale": "us",
+      "mode": "rerank",
+      "took_ms": 1181.23,
+      "results": [
+        {
+          "product_id": "B088DWJM7S",
+          "text": "Introverted But Willing To Discuss Claptrap - 20oz Stainless Steel Water Bottle, Silver | Molandra Products | Silver | WATER BOTTLES ARE COOL! - This is a 20oz Stainless Steel Water Bottle. With its n"
+        },
+        {
+          "product_id": "B07VM6X9JK",
+          "text": "HOMPO Metal Water Bottle Stainless Steel - 9oz/260ml Vacuum Insulated Double Walled Thermos, Bpa Free Reusable Drinks Bottle Hot & Cold with Leak Proof lid for Kids, Hiking, Gym (lily wood) | HOMPO | "
+        },
+        {
+          "product_id": "B07RJTKL5W",
+          "text": "Triple-Insulated Stainless Steel Water Bottle (set of 2) 17 Ounce, Sleek Insulated Water Bottles, Keeps Hot and Cold, 100% Leakproof Lids, Sweatproof Water Bottles, Great for Travel, Picnic& Camping. "
+        }
+      ]
+    },
+    "recommend": {
+      "customer_id": 12346,
+      "personalised": true,
+      "took_ms": 0.57,
+      "items": [
+        {
+          "stock_code": "48194",
+          "description": "DOORMAT HEARTS"
+        },
+        {
+          "stock_code": "48184",
+          "description": "DOORMAT ENGLISH ROSE "
+        },
+        {
+          "stock_code": "23284",
+          "description": "DOORMAT KEEP CALM AND COME IN"
+        }
+      ]
+    }
+  },
+  "server_rss_mb": 1607.602176,
+  "index_mb": {
+    "jp": {
+      "bm25.npz": 12.0,
+      "docs.json": 27.4,
+      "emb_fp16.npy": 38.4,
+      "vocab.pkl": 1.5
+    },
+    "recs": {
+      "ease_W_fp16.npy": 42.7,
+      "history.npz": 0.9,
+      "meta.json": 0.2
+    },
+    "us": {
+      "bm25.npz": 8.7,
+      "docs.json": 19.0,
+      "emb_fp16.npy": 38.4,
+      "vocab.pkl": 1.2
+    }
+  }
+}
