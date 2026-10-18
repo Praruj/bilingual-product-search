@@ -7,3 +7,4 @@ outputs/**/*.npy
 *.egg-info/
 *.log
 models/
+outputs/**/*.model.txt
