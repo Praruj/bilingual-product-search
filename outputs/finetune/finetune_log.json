@@ -1,0 +1,45 @@
+{
+  "bi_encoder": {
+    "base": "intfloat/multilingual-e5-small",
+    "hparams": {
+      "epochs": 2,
+      "batch_size": 128,
+      "lr": 3e-05,
+      "warmup": 0.1,
+      "max_len": 64,
+      "scale": 20.0,
+      "max_pos_per_query": 4
+    },
+    "sanity_ndcg10_before": {
+      "jp": 0.7369,
+      "us": 0.7251
+    },
+    "sanity_ndcg10_after": {
+      "jp": 0.7542,
+      "us": 0.758
+    }
+  },
+  "cross_encoder": {
+    "base": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+    "hparams": {
+      "epochs": 1,
+      "batch_size": 64,
+      "lr": 2e-05,
+      "warmup": 0.1,
+      "max_len": 128
+    },
+    "sanity_ndcg10_before": {
+      "jp": 0.742,
+      "us": 0.7428
+    },
+    "sanity_ndcg10_after": {
+      "jp": 0.7727,
+      "us": 0.7834
+    }
+  },
+  "train_queries": 26972,
+  "train_pairs": 599638,
+  "sanity_queries": 600,
+  "device": "Tesla T4",
+  "smoke": false
+}

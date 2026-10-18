@@ -17,6 +17,9 @@ laptop CPU. Each number is measured on held-out data and comes with a 95% bootst
 | **Hybrid** (BM25 + E5, weight tuned on train queries) | **0.548** | **0.532** |
 | Hybrid + cross-encoder rerank of top 20 | 0.567 | 0.560 |
 | Recall@100 of Exact products, hybrid | 0.762 | 0.815 |
+| *After fine-tuning both models on ESCI train queries:* | | |
+| Hybrid, fine-tuned E5 | 0.582 | 0.559 |
+| **Hybrid + fine-tuned reranker** | **0.595** | **0.576** |
 
 | Recommendation, NDCG@20 on next-quarter purchases (2,336 customers) | |
 |---|---|
@@ -52,9 +55,17 @@ with part numbers. The hybrid covers both (0.504). With only 72 queries this gap
 (Japanese) and +0.028 (English) NDCG@10, but costs about 1.2 s per query on this CPU. When it only
 reorders the judged candidates of each query (the official ESCI ranking task), it does **no better than E5
 alone** (Japanese 0.736 vs 0.737; English 0.728 vs 0.742). The model was trained on MS MARCO web passages, not
-product listings. Fine-tuning it on ESCI's training labels is the obvious next step, and needs a GPU.
+product listings. Fine-tuning fixes this (finding 5).
 
-**5. In recommendation, the strongest baseline is "buy it again".** In this retailer's data, 38% of what a
+**5. Fine-tuning on ESCI's own labels gives the largest gain after the hybrid.** Trained on a Colab T4
+(about 40 minutes for both models), the fine-tuned E5 gains +0.065 (Japanese) and +0.041 (English) NDCG@10 on
+the full corpus. The fine-tuned cross-encoder now beats E5 on the judged candidates (0.774 vs 0.755; 0.771 vs
+0.761), where before it was no better. End to end, hybrid + rerank goes from 0.567 to 0.595 (Japanese) and
+0.560 to 0.576 (English), all p ≤ 0.002 on the same test queries. The biggest jump is on the Latin-only
+Japanese queries from finding 3, where E5 rises from 0.402 to 0.541. Details and checks are in
+[Fine-tuning on ESCI](#fine-tuning-on-esci).
+
+**6. In recommendation, the strongest baseline is "buy it again".** In this retailer's data, 38% of what a
 customer buys in the test quarter they had bought before (many customers are wholesalers who re-stock). Simply
 re-recommending their own most frequent items scores 0.336 NDCG@20, well above EASE (0.260), ALS (0.247) and
 item-kNN (0.209). Blending EASE into it (0.337) is not a significant gain (p = 0.17). The learned models only
@@ -126,17 +137,16 @@ re-buy, item-kNN cosine, implicit ALS (Hu et al., 2008; exact solves, written in
 
 ## Fine-tuning on ESCI
 
-**Status: set up, not yet run.** The numbers above are all off-the-shelf models. The before/after table
-below will be filled from `scripts/compare_runs.py` once the Colab training and the laptop re-evaluation
-have run; nothing here is an estimate.
+Both neural models were fine-tuned on ESCI training queries and evaluated with the unchanged pipeline on the
+same 1,000 test queries per language and the same 50k-product corpora as everything above.
 
 **Training data.** `scripts/make_finetune_data.py` takes ESCI `small_version` train-split queries for jp and
 us and removes the 300 dev queries per language that the hybrid weight is tuned on, leaving 27,572 queries and
 614,450 judged (query, product) pairs. It asserts that no training query is an evaluation query and that no
 training query has the same text as any test-split query. Product text is the same as in the evaluation corpus.
 
-**Models** ([notebooks/colab_finetune.ipynb](notebooks/colab_finetune.ipynb), one T4 GPU, fixed
-hyperparameters chosen before seeing any test result):
+**Models** ([notebooks/colab_finetune.ipynb](notebooks/colab_finetune.ipynb), one T4 GPU: 10 min for E5, 27 min
+for the reranker; hyperparameters fixed before seeing any test result, single run, seed 0):
 - E5-small: contrastive loss over in-batch negatives plus one hard negative per query, taken from that query's
   products labelled Irrelevant or Substitute; batches hold one language and each query at most once, so a
   query's other Exact products are never treated as negatives. 2 epochs, up to 4 Exact products per query per
@@ -144,12 +154,41 @@ hyperparameters chosen before seeing any test result):
 - Cross-encoder: binary cross-entropy on every judged pair with the ESCI gains as soft targets
   (E 1, S 0.1, C 0.01, I 0), 1 epoch, batch 64, learning rate 2e-5.
 
-**Evaluation.** `scripts/run_search.py --encoder … --reranker … --tag finetuned` reruns the whole pipeline on
-the same 1,000 test queries per language and the same 50k-product corpora, re-tuning the hybrid weight on the
-same dev queries. `scripts/compare_runs.py --new finetuned` reports each NDCG@10 before and after with 95%
-intervals, the paired difference with its interval, and a two-sided paired bootstrap p-value.
+**Results** (`scripts/compare_runs.py --new finetuned`; paired bootstrap over the same queries; the
+judged-candidate cross-encoder rows use the first 200 test queries, as in the baseline):
 
-<!-- results table from outputs/search/compare_finetuned.md goes here -->
+| | NDCG@10 | Off-the-shelf [95% CI] | Fine-tuned [95% CI] | Δ [95% CI] | p |
+|---|---|---|---|---|---|
+| JA | E5, full corpus | 0.495 [0.476, 0.516] | 0.560 [0.541, 0.579] | +0.065 [+0.054, +0.077] | < 0.001 |
+| JA | Hybrid, full corpus | 0.548 [0.529, 0.567] | 0.582 [0.564, 0.602] | +0.034 [+0.025, +0.042] | < 0.001 |
+| JA | Hybrid + rerank top 20 | 0.567 [0.548, 0.586] | 0.595 [0.577, 0.614] | +0.029 [+0.020, +0.038] | < 0.001 |
+| JA | E5, judged candidates | 0.737 [0.724, 0.751] | 0.755 [0.741, 0.768] | +0.017 [+0.010, +0.025] | < 0.001 |
+| JA | Cross-encoder, judged candidates | 0.736 [0.703, 0.764] | 0.774 [0.744, 0.802] | +0.038 [+0.018, +0.059] | 0.002 |
+| EN | E5, full corpus | 0.500 [0.481, 0.519] | 0.542 [0.523, 0.561] | +0.041 [+0.031, +0.052] | < 0.001 |
+| EN | Hybrid, full corpus | 0.532 [0.515, 0.551] | 0.559 [0.541, 0.577] | +0.027 [+0.019, +0.035] | < 0.001 |
+| EN | Hybrid + rerank top 20 | 0.560 [0.541, 0.577] | 0.576 [0.558, 0.593] | +0.016 [+0.005, +0.026] | 0.001 |
+| EN | E5, judged candidates | 0.742 [0.731, 0.754] | 0.761 [0.750, 0.774] | +0.019 [+0.012, +0.027] | < 0.001 |
+| EN | Cross-encoder, judged candidates | 0.728 [0.698, 0.757] | 0.771 [0.742, 0.799] | +0.043 [+0.024, +0.062] | < 0.001 |
+
+Recall@100 of the hybrid rose from 0.762 to 0.795 (JA) and 0.815 to 0.851 (EN). The hybrid weight re-tuned on
+the dev queries stayed at 0.8. On Japanese queries with no Japanese characters (72 queries), fine-tuned E5
+scores 0.541 against 0.402 before, so the dense model no longer trails BM25 (0.469) there.
+
+**Checks.**
+- *Reproducibility.* Before the comparison the off-the-shelf pipeline was rerun from scratch; every metric
+  matched the earlier run exactly, so the deltas are not run-to-run noise in the evaluation.
+- *Seen products.* No test query is in the training data, but 24.5% of test-judged products were also judged
+  for some training query, so the models have seen their text. The gain does not come from that: on the 435 (JA)
+  and 448 (EN) test queries whose Exact products never appear in training, the hybrid gains +0.036 [+0.022,
+  +0.049] and +0.032 [+0.020, +0.044], at least as much as on the rest
+  (`outputs/finetune/seen_product_check.json`).
+- *Sanity check during training.* On 300 held-back training queries per language, NDCG@10 on judged
+  candidates rose from 0.737 to 0.754 (JA) / 0.725 to 0.758 (EN) for E5 and from 0.742 to 0.773 / 0.743 to
+  0.783 for the reranker (`outputs/finetune/finetune_log.json`). These queries were not used for any choice.
+
+**Cost.** Same architectures, so the same latency (the reranker still needs about 1.3–1.6 s per query for 20
+candidates on this CPU, measured while other jobs shared it). The fine-tuned models are not committed (470 MB
+each); the notebook rebuilds them. The API in this repo still serves the off-the-shelf models.
 
 ## Limitations
 
@@ -159,7 +198,9 @@ intervals, the paired difference with its interval, and a two-sided paired boots
   point.
 - The corpus is 50k products per locale, not Amazon's full catalogue, because encoding runs at about 40
   products per second on this laptop (2 threads). A larger corpus makes every method look worse.
-- Nothing is fine-tuned on ESCI. Both neural models are used as published.
+- The fine-tuned models come from one fixed set of hyperparameters and a single training run (seed 0);
+  run-to-run variance of the fine-tuning itself is not measured. The API and latency numbers use the
+  off-the-shelf models.
 - The latency is one laptop, one request at a time. Throughput under concurrency is not measured.
 - Online Retail II is one UK retailer with many wholesale buyers, so "buy it again" is unusually strong.
   On a marketplace like Rakuten Ichiba, the balance between re-buys and discovery will be different.
@@ -201,6 +242,7 @@ Amazonの公開データセット「Shopping Queries（ESCI）」を使った日
 
 - **検索**（NDCG@10、各言語1,000クエリ）：日本語は空白区切りのBM25が0.280、MeCabで形態素解析すると0.492、
   多言語E5が0.495、両者のハイブリッドが**0.548**。英語はBM25 0.455、E5 0.500、ハイブリッド**0.532**。
+  ESCIの学習データで両モデルをファインチューニングすると、ハイブリッド＋再ランキングで日本語**0.595**、英語**0.576**。
 - **レコメンド**（NDCG@20、2,336人の次の四半期の購買）：人気順0.107、EASE 0.260、
   **過去に買った商品の再推薦0.336**。
 
@@ -209,8 +251,9 @@ Amazonの公開データセット「Shopping Queries（ESCI）」を使った日
 2. BM25とベクトル検索は苦手なクエリが異なるため、組み合わせると統計的に有意に改善する（重みは学習用クエリで調整）。
 3. amazon.co.jpのクエリの約7%は型番や英単語のみで、そこではベクトル検索がBM25に負ける。
 4. 既製のクロスエンコーダによる再ランキングは1クエリ約1.2秒かかり、ESCIの公式設定ではE5単体と同等。
-   ESCIでのファインチューニングが次の課題。
-5. レコメンドでは「同じ商品をまた買う」が最強のベースライン。学習モデルが勝つのは新しい商品の推薦のみ（EASEは人気順の1.7倍）。
+5. ESCIの学習用クエリ（評価用クエリは除外）でファインチューニングすると、E5は日本語+0.065、英語+0.041改善し、
+   クロスエンコーダもE5を上回るようになった（Colab T4で約40分、すべてp ≤ 0.002）。
+6. レコメンドでは「同じ商品をまた買う」が最強のベースライン。学習モデルが勝つのは新しい商品の推薦のみ（EASEは人気順の1.7倍）。
 
 ## License
 
