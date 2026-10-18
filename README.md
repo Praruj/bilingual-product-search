@@ -124,6 +124,33 @@ September and tested on September to December 9, 2011, for customers who bought 
 Recall@20 is normalised by min(|bought|, 20). Models: popularity (all time and last 30 days), own-history
 re-buy, item-kNN cosine, implicit ALS (Hu et al., 2008; exact solves, written in NumPy), and EASE (Steck, 2019).
 
+## Fine-tuning on ESCI
+
+**Status: set up, not yet run.** The numbers above are all off-the-shelf models. The before/after table
+below will be filled from `scripts/compare_runs.py` once the Colab training and the laptop re-evaluation
+have run; nothing here is an estimate.
+
+**Training data.** `scripts/make_finetune_data.py` takes ESCI `small_version` train-split queries for jp and
+us and removes the 300 dev queries per language that the hybrid weight is tuned on, leaving 27,572 queries and
+614,450 judged (query, product) pairs. It asserts that no training query is an evaluation query and that no
+training query has the same text as any test-split query. Product text is the same as in the evaluation corpus.
+
+**Models** ([notebooks/colab_finetune.ipynb](notebooks/colab_finetune.ipynb), one T4 GPU, fixed
+hyperparameters chosen before seeing any test result):
+- E5-small: contrastive loss over in-batch negatives plus one hard negative per query, taken from that query's
+  products labelled Irrelevant or Substitute; batches hold one language and each query at most once, so a
+  query's other Exact products are never treated as negatives. 2 epochs, up to 4 Exact products per query per
+  epoch, batch 128, learning rate 3e-5.
+- Cross-encoder: binary cross-entropy on every judged pair with the ESCI gains as soft targets
+  (E 1, S 0.1, C 0.01, I 0), 1 epoch, batch 64, learning rate 2e-5.
+
+**Evaluation.** `scripts/run_search.py --encoder … --reranker … --tag finetuned` reruns the whole pipeline on
+the same 1,000 test queries per language and the same 50k-product corpora, re-tuning the hybrid weight on the
+same dev queries. `scripts/compare_runs.py --new finetuned` reports each NDCG@10 before and after with 95%
+intervals, the paired difference with its interval, and a two-sided paired bootstrap p-value.
+
+<!-- results table from outputs/search/compare_finetuned.md goes here -->
+
 ## Limitations
 
 - **Unjudged products count as irrelevant.** ESCI only labels about 28 products per query, so a relevant
@@ -158,6 +185,12 @@ python scripts/run_search.py      # ~2 h on a 2-core laptop CPU, mostly encoding
 python scripts/build_index.py     # artifacts for the API in outputs/index/
 python scripts/bench_service.py   # starts the API and measures latency
 python scripts/report.py          # figures in outputs/figures
+
+# optional: fine-tuning (training on a Colab GPU, evaluation on the laptop)
+python scripts/make_finetune_data.py   # data/finetune/esci_train_pairs.parquet -> upload to MyDrive/bps/
+#   run notebooks/colab_finetune.ipynb on Colab, download MyDrive/bps/models/ into models/
+python scripts/run_search.py --encoder models/e5-small-esci --reranker models/mmarco-minilm-esci --tag finetuned
+python scripts/compare_runs.py --new finetuned
 pytest -q                         # 16 tests on synthetic data, no downloads
 ```
 

@@ -89,3 +89,30 @@ def test_convex_endpoints():
     sparse, dense = np.array([3.0, 0.0, 1.0]), np.array([0.1, 0.9, 0.2])
     assert convex(sparse, dense, 0.0, 1)[0] == 0
     assert convex(sparse, dense, 1.0, 1)[0] == 1
+
+
+def test_finetune_data_excludes_eval_queries(tmp_path):
+    import pandas as pd
+
+    from bps import data
+    from bps.finetune import training_examples
+
+    rows, prods = [], []
+    for q in range(40):
+        split = "test" if q < 10 else "train"
+        for j, lab in enumerate("EESI"):
+            pid = f"P{q}_{j}"
+            rows.append((q, f"query {q}", pid, "jp", lab, 1, split))
+            prods.append((pid, f"title {pid}", "brand", None, "bullet", "jp"))
+    pd.DataFrame(rows, columns=["query_id", "query", "product_id", "product_locale", "esci_label",
+                                "small_version", "split"]).to_parquet(tmp_path / "shopping_queries_dataset_examples.parquet")
+    pd.DataFrame(prods, columns=["product_id", "product_title", "product_brand", "product_color",
+                                 "product_bullet_point", "product_locale"]).to_parquet(
+        tmp_path / "shopping_queries_dataset_products.parquet")
+
+    df, dropped = training_examples("jp", n_dev=5, raw=tmp_path)
+    test, dev, _, _ = data.eval_setup("jp", n_test=10, n_dev=5, corpus=200, raw=tmp_path)
+    assert dropped == set(dev.labels) and len(dropped) == 5
+    assert not set(df["query_id"]) & (set(dev.labels) | set(test.labels))
+    assert df["query_id"].nunique() == 25 and df["doc"].str.startswith("title").all()
+    assert df.loc[df["esci_label"] == "S", "gain"].eq(GAIN["S"]).all()

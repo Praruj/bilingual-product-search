@@ -7,10 +7,15 @@ BM25 (several tokenizers) / multilingual E5 / hybrid / hybrid + cross-encoder re
 Two views:
   retrieval  rank the whole corpus: NDCG@10 and recall@100 of Exact products
   rerank     reorder only the judged candidates of each query (the official ESCI task 1 setting)
+
+--encoder / --reranker take a local model directory (e.g. the fine-tuned models from
+notebooks/colab_finetune.ipynb) and need --tag, which names the outputs (results_<tag>.json, the
+embedding cache) so the off-the-shelf results.json is never overwritten.
 """
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 import time
@@ -21,7 +26,7 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from bps import data  # noqa: E402
 from bps.bm25 import BM25, top_k  # noqa: E402
-from bps.dense import DenseIndex, Reranker  # noqa: E402
+from bps.dense import E5, RERANKER, DenseIndex, Reranker  # noqa: E402
 from bps.hybrid import convex, rrf  # noqa: E402
 from bps.metrics import bootstrap_ci, ndcg_at_k, paired_bootstrap_p, recall_at_k  # noqa: E402
 from bps.text import TOKENIZERS, has_japanese  # noqa: E402
@@ -47,7 +52,18 @@ def summarise(nd, rc):
     return {"ndcg@10": m, "ndcg@10_ci": [lo, hi], "recall@100": r, "recall@100_ci": [rlo, rhi]}
 
 
-def run_locale(locale, args, encoder, reranker):
+def model_fingerprint(name: str) -> str:
+    """Hub name as is; for a local directory, a hash of its weight files' names, sizes and mtimes, so a
+    retrained model saved to the same path does not reuse stale embeddings."""
+    path = Path(name)
+    if not path.is_dir():
+        return name
+    files = sorted(f for f in path.rglob("*") if f.suffix in {".safetensors", ".bin"})
+    key = "|".join(f"{f.relative_to(path)}:{f.stat().st_size}:{f.stat().st_mtime_ns}" for f in files)
+    return f"{path.resolve()}#{hashlib.sha1(key.encode()).hexdigest()[:12]}"
+
+
+def run_locale(locale, args, encoder, reranker, per_query_out):
     t0 = time.time()
     test, dev, corpus_ids, docs = data.eval_setup(locale, args.n_test, args.n_dev, args.corpus)
     ids = np.array(corpus_ids)
@@ -83,12 +99,17 @@ def run_locale(locale, args, encoder, reranker):
     # --- dense
     t = time.perf_counter()
     dense = DenseIndex(encoder)
-    cache = OUT / f"emb_{locale}_{len(docs)}.npy"
-    if cache.exists():
+    suffix = "" if args.encoder == E5 else f"_{args.tag}"
+    cache = OUT / f"emb_{locale}_{len(docs)}{suffix}.npy"
+    stamp = cache.with_suffix(".model.txt")
+    fp = model_fingerprint(args.encoder)
+    if cache.exists() and (args.encoder == E5 or (stamp.exists() and stamp.read_text(encoding="utf-8") == fp)):
         dense.emb = np.load(cache)
     else:
         dense.fit(docs)
         np.save(cache, dense.emb)
+        if args.encoder != E5:
+            stamp.write_text(fp, encoding="utf-8")
     res["timing_s"]["dense_index"] = time.perf_counter() - t
     res["index_bytes"]["dense_fp32"] = dense.nbytes
     nd, rc, dt, _ = evaluate("e5", lambda q: dense.search(q, 100)[0], test)
@@ -163,12 +184,15 @@ def run_locale(locale, args, encoder, reranker):
             order = cand[np.argsort(-fn(q, cand), kind="stable")]
             nds.append(ndcg_at_k(ids[order].tolist(), lab, 10))
         view[name] = bootstrap_ci(nds)[0]
+        per_q[f"rerank_judged_{name}"] = np.array(nds)
     nds = []
     for q, qid in zip(test.queries["query"][: args.n_rerank_view], test.queries["query_id"][: args.n_rerank_view]):
         lab = test.labels[int(qid)]
         cand = np.array([pos[p] for p in lab])
         nds.append(ndcg_at_k(ids[reranker.rerank(q, cand, docs)].tolist(), lab, 10))
     view["cross_encoder"] = bootstrap_ci(nds)[0]
+    view["cross_encoder_ci"] = list(bootstrap_ci(nds)[1:])
+    per_q["rerank_judged_cross_encoder"] = np.array(nds)
     view["random"] = float(np.nanmean([_random_ndcg(test.labels[int(q)]) for q in test.queries["query_id"]]))
     view["note"] = (f"cross_encoder on the first {len(nds)} test queries; candidates per query: "
                     f"{np.mean([len(v) for v in test.labels.values()]):.1f}")
@@ -179,6 +203,9 @@ def run_locale(locale, args, encoder, reranker):
     for q, cand in list(zip(test.queries["query"], rr))[:: max(1, len(rr) // 6)][:6]:
         res["examples"].append({"query": q, "top3": [docs[i][:90] for i in cand[:3]]})
     res["wall_s"] = time.time() - t0
+    # per-query NDCG@10 (same query order in every run), for paired comparisons between runs
+    per_query_out[locale] = {"query_id": [int(q) for q in test.queries["query_id"]],
+                             **{k: [None if np.isnan(x) else float(x) for x in v] for k, v in per_q.items()}}
     return res
 
 
@@ -196,17 +223,25 @@ def main():
     ap.add_argument("--corpus", type=int, default=50_000)
     ap.add_argument("--rerank-n", type=int, default=20)
     ap.add_argument("--n-rerank-view", type=int, default=200)
+    ap.add_argument("--encoder", default=E5, help="hub name or local SentenceTransformer directory")
+    ap.add_argument("--reranker", default=RERANKER, help="hub name or local CrossEncoder directory")
+    ap.add_argument("--tag", default="", help="output name; required with a non-default encoder/reranker")
     args = ap.parse_args()
+    if (args.encoder != E5 or args.reranker != RERANKER) and not args.tag:
+        ap.error("--tag is required with a custom --encoder or --reranker")
     OUT.mkdir(parents=True, exist_ok=True)
-    encoder, reranker = DenseIndex().model, Reranker()
-    path = OUT / "results.json"
+    encoder, reranker = DenseIndex(name=args.encoder).model, Reranker(name=args.reranker)
+    suffix = f"_{args.tag}" if args.tag else ""
+    path, pq_path = OUT / f"results{suffix}.json", OUT / f"per_query{suffix}.json"
     results = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
-    results["config"] = vars(args) | {"encoder": "intfloat/multilingual-e5-small",
-                                       "reranker": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"}
+    per_query_out = json.loads(pq_path.read_text(encoding="utf-8")) if pq_path.exists() else {}
+    results["config"] = vars(args) | {"encoder_fingerprint": model_fingerprint(args.encoder),
+                                       "reranker_fingerprint": model_fingerprint(args.reranker)}
     for loc in args.locales:
-        results[loc] = run_locale(loc, args, encoder, reranker)
+        results[loc] = run_locale(loc, args, encoder, reranker, per_query_out)
         path.write_text(json.dumps(results, indent=2, ensure_ascii=False), encoding="utf-8")
-    print(f"wrote {path}")
+        pq_path.write_text(json.dumps(per_query_out), encoding="utf-8")
+    print(f"wrote {path} and {pq_path}")
 
 
 if __name__ == "__main__":

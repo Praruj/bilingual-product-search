@@ -1,0 +1,24 @@
+{
+  "jp": {
+    "queries": 6984,
+    "pairs": 200827,
+    "labels": {
+      "E": 92401,
+      "S": 66821,
+      "I": 33098,
+      "C": 8507
+    },
+    "excluded_dev_queries": 300
+  },
+  "us": {
+    "queries": 20588,
+    "pairs": 413623,
+    "labels": {
+      "E": 179190,
+      "S": 145477,
+      "I": 70202,
+      "C": 18754
+    },
+    "excluded_dev_queries": 300
+  }
+}

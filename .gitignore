@@ -6,3 +6,4 @@ outputs/index/
 outputs/**/*.npy
 *.egg-info/
 *.log
+models/

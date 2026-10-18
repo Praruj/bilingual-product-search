@@ -10,7 +10,10 @@
     "rerank_n": 20,
     "n_rerank_view": 200,
     "encoder": "intfloat/multilingual-e5-small",
-    "reranker": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"
+    "reranker": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+    "tag": "",
+    "encoder_fingerprint": "intfloat/multilingual-e5-small",
+    "reranker_fingerprint": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"
   },
   "jp": {
     "n_test_queries": 1000,
@@ -29,7 +32,7 @@
           0.2985409115899516,
           0.3427085268186945
         ],
-        "ms_per_query": 0.3140191999991657
+        "ms_per_query": 0.4626994999998715
       },
       "bm25_char_bigram": {
         "ndcg@10": 0.4919726784322272,
@@ -42,7 +45,7 @@
           0.6637370237321886,
           0.7057332428017121
         ],
-        "ms_per_query": 0.47100739999950747
+        "ms_per_query": 0.4691695000001346
       },
       "bm25_mecab": {
         "ndcg@10": 0.4916595408507656,
@@ -55,7 +58,7 @@
           0.6689481527605384,
           0.7100526130693493
         ],
-        "ms_per_query": 0.5949266000025091
+        "ms_per_query": 0.6499388000011095
       },
       "e5_small": {
         "ndcg@10": 0.4953389515085269,
@@ -68,7 +71,7 @@
           0.6813154627413118,
           0.7206498702167436
         ],
-        "ms_per_query": 36.97361809999711
+        "ms_per_query": 91.65358650000053
       },
       "hybrid_convex": {
         "ndcg@10": 0.5481525480531717,
@@ -111,15 +114,19 @@
       "bm25": 0.7147926103618941,
       "e5_small": 0.7374545062760772,
       "cross_encoder": 0.7355356592635072,
+      "cross_encoder_ci": [
+        0.703498640138237,
+        0.7640574626377816
+      ],
       "random": 0.5680658273084828,
       "note": "cross_encoder on the first 200 test queries; candidates per query: 28.3"
     },
     "timing_s": {
-      "bm25_whitespace_index": 2.945240000000922,
-      "bm25_char_bigram_index": 14.872020999999222,
-      "bm25_mecab_index": 18.925121199998102,
-      "dense_index": 1294.1500794999993,
-      "rerank_per_query": 1.215991611700003
+      "bm25_whitespace_index": 2.959129300001223,
+      "bm25_char_bigram_index": 15.227372000001196,
+      "bm25_mecab_index": 23.345474900001136,
+      "dense_index": 0.1819008999991638,
+      "rerank_per_query": 1.7438223341999983
     },
     "index_bytes": {
       "bm25_whitespace": 7653088,
@@ -234,7 +241,7 @@
         ]
       }
     ],
-    "wall_s": 2958.6062145233154
+    "wall_s": 2281.839118003845
   },
   "us": {
     "n_test_queries": 1000,
@@ -253,7 +260,7 @@
           0.6627531578818534,
           0.7049374966963724
         ],
-        "ms_per_query": 0.3934298999993189
+        "ms_per_query": 1.0577526000051876
       },
       "bm25_word": {
         "ndcg@10": 0.45453811626995994,
@@ -266,7 +273,7 @@
           0.7010783032736145,
           0.7415071885741132
         ],
-        "ms_per_query": 0.4109143999994558
+        "ms_per_query": 0.4090887999991537
       },
       "e5_small": {
         "ndcg@10": 0.5003379042963908,
@@ -279,7 +286,7 @@
           0.7639385286400082,
           0.8000336174673056
         ],
-        "ms_per_query": 30.735512899998866
+        "ms_per_query": 32.19381389999762
       },
       "hybrid_convex": {
         "ndcg@10": 0.5324441968063138,
@@ -322,14 +329,18 @@
       "bm25": 0.7051077287055451,
       "e5_small": 0.7419949708664589,
       "cross_encoder": 0.728235630339359,
+      "cross_encoder_ci": [
+        0.6984560482955486,
+        0.7568347187404185
+      ],
       "random": 0.5761938472378079,
       "note": "cross_encoder on the first 200 test queries; candidates per query: 20.1"
     },
     "timing_s": {
-      "bm25_whitespace_index": 3.414605300000403,
-      "bm25_word_index": 4.093087599998398,
-      "dense_index": 1265.6001500999992,
-      "rerank_per_query": 1.2264833727000004
+      "bm25_whitespace_index": 5.239812800005893,
+      "bm25_word_index": 4.086424299995997,
+      "dense_index": 0.20280429999547778,
+      "rerank_per_query": 1.1550034827999989
     },
     "index_bytes": {
       "bm25_whitespace": 18696004,
@@ -412,6 +423,6 @@
         ]
       }
     ],
-    "wall_s": 2849.1696588993073
+    "wall_s": 1545.837183713913
   }
 }
