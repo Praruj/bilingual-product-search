@@ -1,0 +1,428 @@
+{
+  "config": {
+    "locales": [
+      "jp",
+      "us"
+    ],
+    "n_test": 1000,
+    "n_dev": 300,
+    "corpus": 50000,
+    "rerank_n": 20,
+    "n_rerank_view": 200,
+    "encoder": "intfloat/multilingual-e5-small",
+    "reranker": "models/llm_judge/mmarco-minilm-human-labels",
+    "tag": "human_subset",
+    "encoder_fingerprint": "intfloat/multilingual-e5-small",
+    "reranker_fingerprint": "C:\\dev\\bilingual-product-search\\models\\llm_judge\\mmarco-minilm-human-labels#7b68d6c8bb61"
+  },
+  "jp": {
+    "n_test_queries": 1000,
+    "n_dev_queries": 300,
+    "corpus_size": 50000,
+    "share_test_queries_with_japanese_chars": 0.928,
+    "retrieval": {
+      "bm25_whitespace": {
+        "ndcg@10": 0.2801805561314309,
+        "ndcg@10_ci": [
+          0.2608973116867802,
+          0.2999087804133401
+        ],
+        "recall@100": 0.31996601821879417,
+        "recall@100_ci": [
+          0.2985409115899516,
+          0.3427085268186945
+        ],
+        "ms_per_query": 0.416550299996743
+      },
+      "bm25_char_bigram": {
+        "ndcg@10": 0.4919726784322272,
+        "ndcg@10_ci": [
+          0.4715566151263566,
+          0.5118406063637275
+        ],
+        "recall@100": 0.6854578946361142,
+        "recall@100_ci": [
+          0.6637370237321886,
+          0.7057332428017121
+        ],
+        "ms_per_query": 0.48996490001445636
+      },
+      "bm25_mecab": {
+        "ndcg@10": 0.4916595408507656,
+        "ndcg@10_ci": [
+          0.4722105278137306,
+          0.5121254771485628
+        ],
+        "recall@100": 0.6897270007454922,
+        "recall@100_ci": [
+          0.6689481527605384,
+          0.7100526130693493
+        ],
+        "ms_per_query": 0.6418715000036173
+      },
+      "e5_small": {
+        "ndcg@10": 0.4953389515085269,
+        "ndcg@10_ci": [
+          0.47602206533507335,
+          0.515912097265995
+        ],
+        "recall@100": 0.7008734080776908,
+        "recall@100_ci": [
+          0.6813154627413118,
+          0.7206498702167436
+        ],
+        "ms_per_query": 95.22291740000946
+      },
+      "hybrid_convex": {
+        "ndcg@10": 0.5481525480531717,
+        "ndcg@10_ci": [
+          0.5289799193745501,
+          0.5671350988149111
+        ],
+        "recall@100": 0.7620227114101015,
+        "recall@100_ci": [
+          0.743203568580092,
+          0.780501841327767
+        ]
+      },
+      "hybrid_rrf": {
+        "ndcg@10": 0.5340480019386228,
+        "ndcg@10_ci": [
+          0.5153920984741236,
+          0.5532651801070361
+        ],
+        "recall@100": 0.750003615811957,
+        "recall@100_ci": [
+          0.7313912105888133,
+          0.7684260553732533
+        ]
+      },
+      "hybrid_rerank20": {
+        "ndcg@10": 0.5747845493893852,
+        "ndcg@10_ci": [
+          0.555700974887068,
+          0.5941329449183353
+        ],
+        "recall@100": 0.7620227114101015,
+        "recall@100_ci": [
+          0.743203568580092,
+          0.780501841327767
+        ]
+      }
+    },
+    "rerank_judged": {
+      "bm25": 0.7147926103618941,
+      "e5_small": 0.7374545062760772,
+      "cross_encoder": 0.7594290471347719,
+      "cross_encoder_ci": [
+        0.7283100147541979,
+        0.7882272041796049
+      ],
+      "random": 0.5680658273084828,
+      "note": "cross_encoder on the first 200 test queries; candidates per query: 28.3"
+    },
+    "timing_s": {
+      "bm25_whitespace_index": 3.599400400009472,
+      "bm25_char_bigram_index": 20.903558499994688,
+      "bm25_mecab_index": 31.08154410001589,
+      "dense_index": 0.19781979999970645,
+      "rerank_per_query": 1.4784373766999925
+    },
+    "index_bytes": {
+      "bm25_whitespace": 7653088,
+      "bm25_char_bigram": 57421848,
+      "bm25_mecab": 22362204,
+      "dense_fp32": 76800000
+    },
+    "hybrid_alpha_dev_curve": {
+      "0.0": 0.4837861945039416,
+      "0.1": 0.49379342512605223,
+      "0.2": 0.5020439628357763,
+      "0.3": 0.5093810904992487,
+      "0.4": 0.5148807452972631,
+      "0.5": 0.5268877487551434,
+      "0.6": 0.5388372664103722,
+      "0.7": 0.5476712374012248,
+      "0.8": 0.5518801210171532,
+      "0.9": 0.5354781500231618,
+      "1.0": 0.5025571104761761
+    },
+    "hybrid_alpha": 0.8,
+    "paired_p_vs_best_bm25": {
+      "bm25_whitespace": 1.0,
+      "bm25_mecab": 0.5015,
+      "e5_small": 0.322,
+      "hybrid_convex": 0.0,
+      "hybrid_rrf": 0.0,
+      "hybrid_rerank20": 0.0
+    },
+    "paired_p_vs_e5": {
+      "hybrid_convex": 0.0,
+      "hybrid_rrf": 0.0,
+      "hybrid_rerank20": 0.0
+    },
+    "by_script": {
+      "bm25_whitespace": {
+        "japanese_chars": 0.2713935100242896,
+        "latin_only": 0.39343581706791897
+      },
+      "bm25_char_bigram": {
+        "japanese_chars": 0.4946423494124688,
+        "latin_only": 0.457563585798002
+      },
+      "bm25_mecab": {
+        "japanese_chars": 0.4934423282558191,
+        "latin_only": 0.46868139207451875
+      },
+      "e5_small": {
+        "japanese_chars": 0.5025469446286226,
+        "latin_only": 0.4024359290717383
+      },
+      "hybrid_convex": {
+        "japanese_chars": 0.5515962161033104,
+        "latin_only": 0.503767493184716
+      },
+      "hybrid_rrf": {
+        "japanese_chars": 0.5365374238827874,
+        "latin_only": 0.5019621191027231
+      },
+      "hybrid_rerank20": {
+        "japanese_chars": 0.5735214401000156,
+        "latin_only": 0.5910646246745913
+      }
+    },
+    "examples": [
+      {
+        "query": "0.4 ノズル",
+        "top3": [
+          "uxcell 3Dプリンターノズル 真ちゅう製 MK8 ノズル0.4mm 押出機プリントヘッド フィラメント 1.75mm M6 3D プリンター用 10個 | uxcell | ",
+          "uxcell 3Dプリンターノズル ステンレス鋼 MK10 ノズル0.4mm 押出機プリントヘッド フィラメント 1.75mm M7 3D プリンター用 5個 | uxcell |",
+          "[EMY] 3Dプリンター 交換 ノズル 1.75mm フィラメント ノズル径 0.4mm (5個セット) | EMY | 全長：13mm;ネジサイズ： M6 対応フィラメント：1"
+        ]
+      },
+      {
+        "query": "ubuntu",
+        "top3": [
+          "Ubuntu: Ubuntu Tutorial for Beginners Learn the Basics of Ubuntu OS (English Edition)",
+          "Ubuntu",
+          "My QUANTUM: UBUNTU"
+        ]
+      },
+      {
+        "query": "キッズ アクセサリーセット",
+        "top3": [
+          "ヘアアクセサリーセット キッズ 髪飾り ヘアクリップ ヘアピン ヘアゴム 髪留め 可愛い オシャレ 子供用 祝いギフト 誕生日プレゼント 18点セット (ピンク) | AOSNTE",
+          "キッズ アクセサリー セット 真珠 ネックレス カチューシャセット ガールズネックレス 結婚式 パーティー 演奏会 発表会セット 子供アクセサリー キッズ アクセサリー | FOR",
+          "ヘアアクセサリーセット キッズ ヘアクリップ 髪飾り ヘアゴム 子供用 女の子 可愛い 髪留め オシャレ オシャレ 子供用 祝いギフトボックスセット 誕生日プレゼント お洒落 ポー"
+        ]
+      },
+      {
+        "query": "バリキシャッド",
+        "top3": [
+          "GAN CRAFT(ガンクラフト) ワーム バリキシャッド 3.8インチ #02 グリーンパンプキンシャッド | ガンクラフト(GAN CRAFT) | ボディのロールアクションは",
+          "GAN CRAFT(ガンクラフト) ワーム バリキシャッド 3.8インチ #06 ソリッドブラック | ガンクラフト(GAN CRAFT) | ボディのロールアクションは抑え、頭を",
+          "GAN CRAFT(ガンクラフト) ワーム バリキシャッド 3.8インチ #07 琵琶湖鮎 | ガンクラフト(GAN CRAFT) | ボディのロールアクションは抑え、頭を僅かに振"
+        ]
+      },
+      {
+        "query": "世界はなぜ存在しないのか",
+        "top3": [
+          "なぜ世界は存在しないのか (講談社選書メチエ) | 講談社",
+          "ここにない世界",
+          "あなたの人生がつまらないと思うんなら、それはあなた自身がつまらなくしているんだぜ。 1秒でこの世界が変わる70の答え"
+        ]
+      },
+      {
+        "query": "楽しくない仕事はなぜ楽しくないのか",
+        "top3": [
+          "楽しくない仕事は、なぜ楽しくないのか? | プレジデント社",
+          "楽しくなければ仕事じゃない: 「今やっていること」がどんどん「好きで得意」になる働き方の教科書 | 東洋経済新報社",
+          "あなたの人生がつまらないと思うんなら、それはあなた自身がつまらなくしているんだぜ。 1秒でこの世界が変わる70の答え"
+        ]
+      }
+    ],
+    "wall_s": 2129.0947556495667
+  },
+  "us": {
+    "n_test_queries": 1000,
+    "n_dev_queries": 300,
+    "corpus_size": 50000,
+    "share_test_queries_with_japanese_chars": 0.0,
+    "retrieval": {
+      "bm25_whitespace": {
+        "ndcg@10": 0.4224160631060363,
+        "ndcg@10_ci": [
+          0.40438597566664614,
+          0.44078206709250173
+        ],
+        "recall@100": 0.6853976812902859,
+        "recall@100_ci": [
+          0.6627531578818534,
+          0.7049374966963724
+        ],
+        "ms_per_query": 0.45953029999509454
+      },
+      "bm25_word": {
+        "ndcg@10": 0.45453811626995994,
+        "ndcg@10_ci": [
+          0.43572235776121715,
+          0.47201135746235295
+        ],
+        "recall@100": 0.7225875898288503,
+        "recall@100_ci": [
+          0.7010783032736145,
+          0.7415071885741132
+        ],
+        "ms_per_query": 0.4361927999998443
+      },
+      "e5_small": {
+        "ndcg@10": 0.5003379042963908,
+        "ndcg@10_ci": [
+          0.48149513954934403,
+          0.5191650246019581
+        ],
+        "recall@100": 0.78198621276672,
+        "recall@100_ci": [
+          0.7639385286400082,
+          0.8000336174673056
+        ],
+        "ms_per_query": 38.63938889998826
+      },
+      "hybrid_convex": {
+        "ndcg@10": 0.5324441968063138,
+        "ndcg@10_ci": [
+          0.5150155655048139,
+          0.551415714592535
+        ],
+        "recall@100": 0.8148681389193742,
+        "recall@100_ci": [
+          0.7975987194207664,
+          0.8318247653838703
+        ]
+      },
+      "hybrid_rrf": {
+        "ndcg@10": 0.5073151655940359,
+        "ndcg@10_ci": [
+          0.4895379574668827,
+          0.5254360677875841
+        ],
+        "recall@100": 0.8037566467522507,
+        "recall@100_ci": [
+          0.7856231492754517,
+          0.8210451049767968
+        ]
+      },
+      "hybrid_rerank20": {
+        "ndcg@10": 0.5572248325579722,
+        "ndcg@10_ci": [
+          0.5384104771905371,
+          0.5756748959207176
+        ],
+        "recall@100": 0.8148681389193742,
+        "recall@100_ci": [
+          0.7975987194207664,
+          0.8318247653838703
+        ]
+      }
+    },
+    "rerank_judged": {
+      "bm25": 0.7051077287055451,
+      "e5_small": 0.7419949708664589,
+      "cross_encoder": 0.7486614110091666,
+      "cross_encoder_ci": [
+        0.7193209497729999,
+        0.7766155731361863
+      ],
+      "random": 0.5761938472378079,
+      "note": "cross_encoder on the first 200 test queries; candidates per query: 20.1"
+    },
+    "timing_s": {
+      "bm25_whitespace_index": 3.3808963000192307,
+      "bm25_word_index": 4.196425400004955,
+      "dense_index": 0.23256010000477545,
+      "rerank_per_query": 1.466576741099998
+    },
+    "index_bytes": {
+      "bm25_whitespace": 18696004,
+      "bm25_word": 17496456,
+      "dense_fp32": 76800000
+    },
+    "hybrid_alpha_dev_curve": {
+      "0.0": 0.4516474685795159,
+      "0.1": 0.46589932817845875,
+      "0.2": 0.4802818971669283,
+      "0.3": 0.48933014153328286,
+      "0.4": 0.5016003924732869,
+      "0.5": 0.5149158064085677,
+      "0.6": 0.5296546775287974,
+      "0.7": 0.5389537196929449,
+      "0.8": 0.5466662203329911,
+      "0.9": 0.5417092449621064,
+      "1.0": 0.5216502910722627
+    },
+    "hybrid_alpha": 0.8,
+    "paired_p_vs_best_bm25": {
+      "bm25_whitespace": 1.0,
+      "e5_small": 0.0,
+      "hybrid_convex": 0.0,
+      "hybrid_rrf": 0.0,
+      "hybrid_rerank20": 0.0
+    },
+    "paired_p_vs_e5": {
+      "hybrid_convex": 0.0,
+      "hybrid_rrf": 0.1215,
+      "hybrid_rerank20": 0.0
+    },
+    "examples": [
+      {
+        "query": "#1 rated resveratrol supplement without tea leaves",
+        "top3": [
+          "Garden of Life Heart Resveratrol Supplement, Raw Whole Food Antioxidant Formula for Heart ",
+          "NOW Supplements, Natural Resveratrol 200 mg with Red Wine Extract, 120 Veg Capsules | NOW ",
+          "Amazon Brand - Revly Trans-Resveratrol, 250 mg, 60 Capsules, 2 Month Supply, Vegan | Revly"
+        ]
+      },
+      {
+        "query": "body lotion spray",
+        "top3": [
+          "Body Drench Coconut Water Hydrating Spray Lotion for All Skin Types, 8.5 fl oz | Body Dren",
+          "Vaseline Intensive Care Spray Lotion, Essential Healing, 6.5 oz | Vaseline | Vaseline Inte",
+          "Vaseline Intensive Care Spray Lotion, Advanced Repair Unscented, 6.5 oz | Vaseline | Vasel"
+        ]
+      },
+      {
+        "query": "fanny packs for women cute",
+        "top3": [
+          "Fanny Packs for Women Men, Cute Fanny Pack for Kids Teens Girls Boys, Fashion Waterproof W",
+          "LIVACASA Fanny Packs for Women Cute Waist Packs Waist Bum Bag Holographic Fanny Packs Wate",
+          "swelldom Fanny Pack Belt Bag, Holographic Fanny Packs Women Men Kids, Fashion Waist Pack 3"
+        ]
+      },
+      {
+        "query": "laptop 256gb ssd",
+        "top3": [
+          "HP Laptop 14 Laptop AMD Ryzen 3 8GB RAM 256GB SSD 14-dk0736ms | HP | HP Laptop 14 Laptop A",
+          "Apple MacBook Pro 15.4 Laptop Intel Core i7 2.60Ghz 16GB RAM 256GB SSD MLW72LL/A (Renewed)",
+          "Lenovo - IdeaPad 3 15\" Laptop - Intel Core i3-1005G1-8GB Memory - 256GB SSD - Platinum Gre"
+        ]
+      },
+      {
+        "query": "panacur for cats",
+        "top3": [
+          "Panacur C Canine Dewormer Dogs 1 (3 Packets) Gram Each Packet Treats 10 lbs (4 Pack) | Pan",
+          "Panacur C Canine Dewormer Dogs 2 Gram Each Packet Treats 20 lbs (3 Packets) | Panacur C Ca",
+          "Panacur C Canine Dewormer (Fenbendazole), 1 Gram, Yellow, 3 Count (Pack of 1) | Panacur | "
+        ]
+      },
+      {
+        "query": "solo black rug",
+        "top3": [
+          "Ottomanson Soft Cozy Color Solid Shag Area Rug Contemporary Living and Bedroom Soft Shag A",
+          "Rugs.com Geometric Kasbah Trellis Collection Rug – 4' X 6' Black Low Pile Rug Perfect for ",
+          "Wilderness Systems XL Kayak Rudder Kit - for Solo Wilderness System Kayaks, Black | Wilder"
+        ]
+      }
+    ],
+    "wall_s": 1920.91903090477
+  }
+}

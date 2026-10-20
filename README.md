@@ -65,7 +65,14 @@ the full corpus. The fine-tuned cross-encoder now beats E5 on the judged candida
 Japanese queries from finding 3, where E5 rises from 0.402 to 0.541. Details and checks are in
 [Fine-tuning on ESCI](#fine-tuning-on-esci).
 
-**6. In recommendation, the strongest baseline is "buy it again".** In this retailer's data, 38% of what a
+**6. An open LLM judge is not a free replacement for human labels.** Qwen2.5-7B (4-bit, free Colab T4) labelling
+ESCI pairs agrees with the human labels at Cohen's κ 0.16–0.21, no better than always guessing the most common
+label, and as a ranker it only ties off-the-shelf E5. A cross-encoder trained on 40k LLM-labelled pairs is worse
+than the same model trained on the human labels of the same pairs (English end to end 0.545 vs 0.557,
+p < 0.001). Part of the disagreement is ESCI's own label noise. Details in
+[Can an open LLM replace the human labels?](#can-an-open-llm-replace-the-human-labels)
+
+**7. In recommendation, the strongest baseline is "buy it again".** In this retailer's data, 38% of what a
 customer buys in the test quarter they had bought before (many customers are wholesalers who re-stock). Simply
 re-recommending their own most frequent items scores 0.336 NDCG@20, well above EASE (0.260), ALS (0.247) and
 item-kNN (0.209). Blending EASE into it (0.337) is not a significant gain (p = 0.17). The learned models only
@@ -190,6 +197,75 @@ scores 0.541 against 0.402 before, so the dense model no longer trails BM25 (0.4
 candidates on this CPU, measured while other jobs shared it). The fine-tuned models are not committed (470 MB
 each); the notebook rebuilds them. The API in this repo still serves the off-the-shelf models.
 
+## Can an open LLM replace the human labels?
+
+Relevance labels are expensive, so a common idea is to let an LLM judge (query, product) pairs instead. I tested
+this at zero cost: an open model on a free Colab T4, no paid API.
+
+**Setup** ([notebooks/colab_llm_judge.ipynb](notebooks/colab_llm_judge.ipynb), `scripts/llm_judge.py`).
+`Qwen/Qwen2.5-7B-Instruct` (Apache-2.0), 4-bit NF4. The prompt gives the four ESCI definitions, the query and the
+product text (first 400 characters); the next-token probabilities of the letters E / S / C / I are the
+judgement (one forward pass, no sampling, no prompt tuning on evaluation pairs). The system prompt's
+keys/values are computed once and shared by every batch, which takes the T4 from 5 to about 8–9 pairs per second
+(same argmax label on all 609 pairs checked). `scripts/make_judge_data.py` picks the pairs and the notebook
+checks that Colab rebuilt exactly the same file (fingerprint):
+- *Held-out:* every judged product of the first 200 test queries per language (10,226 pairs), the same
+  queries as the judged-candidate rows above.
+- *Distillation:* whole training queries (train split minus the dev queries; no test query or test query text,
+  asserted), labelled in a seeded random order within a 1.3-hour budget: 1,620 queries (810 per language),
+  40,118 pairs.
+
+**1. Agreement with the human labels is weak** (`scripts/judge_report.py` → `outputs/llm_judge/results.md`;
+intervals resample whole queries):
+
+| Pairs | Lang | Accuracy [95% CI] | Always the most common label | Cohen's κ [95% CI] | κ, Exact vs rest | Recall E / S / C / I |
+|---|---|---|---|---|---|---|
+| Held-out (test) | JA | 0.398 [0.364, 0.433] | 0.383 | 0.163 [0.130, 0.197] | 0.252 | 0.66 / 0.02 / 0.05 / 0.75 |
+| Held-out (test) | EN | 0.420 [0.392, 0.449] | 0.424 | 0.181 [0.151, 0.210] | 0.251 | 0.54 / 0.11 / 0.03 / 0.83 |
+| Training | JA | 0.447 [0.431, 0.464] | 0.460 | 0.191 [0.175, 0.207] | 0.304 | 0.68 / 0.02 / 0.07 / 0.77 |
+| Training | EN | 0.448 [0.432, 0.464] | 0.420 | 0.205 [0.188, 0.222] | 0.297 | 0.64 / 0.09 / 0.06 / 0.78 |
+
+Accuracy is no better than always answering the most common label. The model almost never says Substitute,
+and it calls about a third of the human-Exact products Irrelevant. The disagreement is not all the model's
+fault: in a read of 20 random "human Exact, LLM Irrelevant" pairs, about half of the human labels look wrong
+(a 60-inch vanity for "72 inch vanity", a bag with handles for "取っ手なし"); the LLM's own typical miss is a
+bare brand or author name (`outputs/llm_judge/audit_exact_vs_irrelevant.md`; one reader, so only a rough
+indication).
+
+**2. As a ranker, the LLM ties off-the-shelf E5 and loses to every cross-encoder.** NDCG@10 when each held-out
+query's judged products are ordered by the LLM's expected gain, paired on the same 200 queries per language:
+
+| Ranker | JA | EN |
+|---|---|---|
+| Random order | 0.568 | 0.576 |
+| **LLM judge** (Qwen2.5-7B, 4-bit) | **0.686** [0.652, 0.720] | **0.700** [0.672, 0.727] |
+| E5, off the shelf | 0.690 (LLM −0.004, p = 0.83) | 0.711 (LLM −0.011, p = 0.45) |
+| Cross-encoder, off the shelf | 0.736 (LLM −0.049, p = 0.001) | 0.728 (LLM −0.028, p = 0.030) |
+| Cross-encoder fine-tuned on 600k human labels | 0.774 (LLM −0.088, p < 0.001) | 0.771 (LLM −0.071, p < 0.001) |
+
+**3. Distillation: a cross-encoder trained on LLM labels does not come close to one trained on human labels.**
+The same cross-encoder recipe as above (1 epoch, BCE on ESCI gains) was trained twice on exactly the same
+40,118 pairs, once with the gain of the LLM's label and once with the human label, and evaluated with
+`run_search.py` on the full test set (`compare_runs.py`; paired bootstrap):
+
+| | Lang | Off the shelf | Human labels (same pairs) | LLM labels | LLM − human [95% CI], p |
+|---|---|---|---|---|---|
+| Cross-encoder, judged candidates (200 q) | JA | 0.736 | 0.759 | 0.747 | −0.012 [−0.027, +0.002], 0.11 |
+| Cross-encoder, judged candidates (200 q) | EN | 0.728 | 0.749 | 0.723 | −0.026 [−0.040, −0.012], < 0.001 |
+| Hybrid + rerank top 20 (1,000 q) | JA | 0.567 | 0.575 | 0.569 | −0.006 [−0.012, +0.000], 0.074 |
+| Hybrid + rerank top 20 (1,000 q) | EN | 0.560 | 0.557 | 0.545 | −0.012 [−0.019, −0.006], < 0.001 |
+
+Human labels on 40k pairs already help the reranker on judged candidates (+0.024 JA, p = 0.011; +0.020 EN,
+p = 0.020 over off the shelf). The same pairs with LLM labels give no significant gain in Japanese and make
+English end-to-end search worse than not training at all (0.545 vs 0.560, p < 0.001). One curiosity: the
+student beats its teacher (0.747 vs 0.686 JA on judged candidates), because it starts from a pretrained
+reranker and only learns the labels' coarse shape.
+
+**Bottom line.** With this model, prompt and free hardware, LLM labels are not a substitute for ESCI's human
+labels. They would need at least a stronger judge, few-shot examples, or calibration against a small human-labelled
+set. ESCI's own label noise also caps how much agreement is possible. Single run, one prompt, no tuning;
+the final run took about 2 hours of free Colab GPU time.
+
 ## Limitations
 
 - **Unjudged products count as irrelevant.** ESCI only labels about 28 products per query, so a relevant
@@ -232,7 +308,14 @@ python scripts/make_finetune_data.py   # data/finetune/esci_train_pairs.parquet 
 #   run notebooks/colab_finetune.ipynb on Colab, download MyDrive/bps/models/ into models/
 python scripts/run_search.py --encoder models/e5-small-esci --reranker models/mmarco-minilm-esci --tag finetuned
 python scripts/compare_runs.py --new finetuned
-pytest -q                         # 16 tests on synthetic data, no downloads
+# optional: LLM relevance judge (labelling and training on free Colab, evaluation on the laptop)
+python scripts/make_judge_data.py      # data/judge/judge_pairs.parquet (the notebook rebuilds and checks it)
+#   run notebooks/colab_llm_judge.ipynb on Colab; unzip labels/ into data/judge/, models/ into models/llm_judge/
+python scripts/judge_report.py         # agreement and LLM ranking -> outputs/llm_judge/
+python scripts/run_search.py --reranker models/llm_judge/mmarco-minilm-llm-labels --tag llm_distilled
+python scripts/run_search.py --reranker models/llm_judge/mmarco-minilm-human-labels --tag human_subset
+python scripts/compare_runs.py --base human_subset --new llm_distilled
+pytest -q                         # 28 tests on synthetic data, no downloads
 ```
 
 ## 日本語概要
@@ -253,7 +336,10 @@ Amazonの公開データセット「Shopping Queries（ESCI）」を使った日
 4. 既製のクロスエンコーダによる再ランキングは1クエリ約1.2秒かかり、ESCIの公式設定ではE5単体と同等。
 5. ESCIの学習用クエリ（評価用クエリは除外）でファインチューニングすると、E5は日本語+0.065、英語+0.041改善し、
    クロスエンコーダもE5を上回るようになった（Colab T4で約40分、すべてp ≤ 0.002）。
-6. レコメンドでは「同じ商品をまた買う」が最強のベースライン。学習モデルが勝つのは新しい商品の推薦のみ（EASEは人気順の1.7倍）。
+6. オープンLLM（Qwen2.5-7B、無料のColab T4）にESCIの関連度ラベルを付けさせると、人手ラベルとの一致はκ 0.16〜0.21と低く、
+   ランキング性能も既製E5と同等。LLMラベルで学習したクロスエンコーダは、同じペアの人手ラベルで学習したものより弱い
+   （英語の検索全体で0.545対0.557、p < 0.001）。ただし不一致の一部はESCI側のラベルの誤りによる。
+7. レコメンドでは「同じ商品をまた買う」が最強のベースライン。学習モデルが勝つのは新しい商品の推薦のみ（EASEは人気順の1.7倍）。
 
 ## License
 

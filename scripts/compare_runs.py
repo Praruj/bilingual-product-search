@@ -3,7 +3,7 @@
     python scripts/compare_runs.py --new finetuned           # results.json vs results_finetuned.json
 
 Uses the per-query NDCG@10 files, so intervals and p-values are paired on identical queries. Writes
-outputs/search/compare_<new>.md and .json.
+outputs/search/compare_<new>[_vs_<base>].md and .json.
 """
 from __future__ import annotations
 
@@ -82,8 +82,9 @@ def main():
                      f"{out[loc]['recall@100_hybrid']['new']:.3f} | | | |")
     md = "\n".join(lines) + "\n"
     print(md)
-    (OUT / f"compare_{args.new}.md").write_text(md, encoding="utf-8")
-    (OUT / f"compare_{args.new}.json").write_text(json.dumps(out, indent=2), encoding="utf-8")
+    name = f"compare_{args.new}" + (f"_vs_{args.base}" if args.base else "")
+    (OUT / f"{name}.md").write_text(md, encoding="utf-8")
+    (OUT / f"{name}.json").write_text(json.dumps(out, indent=2), encoding="utf-8")
 
 
 if __name__ == "__main__":

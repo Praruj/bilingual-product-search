@@ -14,7 +14,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from bps import data  # noqa: E402
-from bps.finetune import training_examples  # noqa: E402
+from bps.finetune import assert_no_eval_leak, training_examples  # noqa: E402
 
 
 def main():
@@ -29,12 +29,7 @@ def main():
     for loc in args.locales:
         df, dropped = training_examples(loc, args.n_dev)
         # leakage checks against exactly what run_search.py evaluates on
-        ex = data.load_examples(loc)
-        test_ids = set(int(q) for q in data.sample_queries(ex, "test", args.n_test, seed=0))
-        test_text = set(ex.loc[ex["split"] == "test", "query"].str.lower().str.strip())
-        assert not set(df["query_id"]) & (test_ids | dropped), "eval query in training data"
-        n_text = int(df["query"].str.lower().str.strip().isin(test_text).sum())
-        assert n_text == 0, f"{n_text} training rows share query text with the test split"
+        assert_no_eval_leak(df, data.load_examples(loc), dropped, args.n_test)
         stats[loc] = {"queries": int(df["query_id"].nunique()), "pairs": len(df),
                       "labels": df["esci_label"].value_counts().to_dict(),
                       "excluded_dev_queries": len(dropped)}
